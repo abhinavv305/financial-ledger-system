@@ -1,8 +1,10 @@
 package com.ledger.controller;
 
 import  com.ledger.dto.CreateAccountRequest;
+import com.ledger.dto.TransferResponse;
 import com.ledger.entity.Account;
 import com.ledger.service.AccountService;
+import com.ledger.dto.TransferMoneyRequest;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,5 +21,14 @@ public class AccountController {
     public Account createAccount(
             @Valid @RequestBody CreateAccountRequest request){
         return accountService.createAccount(request);
+    }
+    @GetMapping("/{id}")
+    public Account getAccountById(@PathVariable Long id){
+        return accountService.getAccountById(id);
+    }
+    @PostMapping("/transfer")
+    public TransferResponse transferMoney(
+            @Valid @RequestBody TransferMoneyRequest request){
+        return accountService.transferMoney(request);
     }
 }
