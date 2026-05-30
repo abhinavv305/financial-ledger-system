@@ -1,12 +1,16 @@
 package com.ledger.service;
 
+import java.util.List;
+import java.util.stream.Collectors;
 import com.ledger.dto.CreateAccountRequest;
 import com.ledger.dto.TransferResponse;
+import com.ledger.dto.TransactionResponse;
 import com.ledger.entity.Transaction;
 import com.ledger.exception.AccountNotFoundException;
 import com.ledger.entity.Account;
 import com.ledger.exception.InsufficientBalanceException;
 import com.ledger.exception.InvalidTransferException;
+import com.ledger.exception.TransactionNotFoundException;
 import com.ledger.repository.AccountRepository;
 import com.ledger.dto.TransferMoneyRequest;
 import com.ledger.repository.TransactionRepository;
@@ -73,13 +77,14 @@ public class AccountService{
         accountRepository.save(sourceAccount);
         accountRepository.save(destinationAccount);
 
+        String referenceNumber = "TXN-" + System.currentTimeMillis();
         Transaction transaction = new Transaction();
         transaction.setFromAccountId(request.getFromAccountId());
         transaction.setToAccountId(request.getToAccountId());
         transaction.setAmount(request.getAmount());
         transaction.setTimestamp(LocalDateTime.now());
         transaction.setStatus("SUCCESS");
-
+        transaction.setReferenceNumber(referenceNumber);
         transactionRepository.save(transaction);
 
         TransferResponse response = new TransferResponse();
@@ -90,5 +95,43 @@ public class AccountService{
         response.setAmount(request.getAmount());
 
         return response;
+    }
+    public TransactionResponse getTransactionByReference(
+            String referenceNumber){
+        Transaction transaction = transactionRepository
+                .findByReferenceNumber(referenceNumber)
+                .orElseThrow(() ->
+                        new TransactionNotFoundException(referenceNumber));
+        return convertToTransactionResponse(transaction);
+    }
+    public List<TransactionResponse> getAllTransactions(){
+        List<Transaction> transactions =
+                transactionRepository.findAll();
+        return transactions.stream()
+                .map(this::convertToTransactionResponse)
+                .collect(Collectors.toList());
+    }
+    private TransactionResponse convertToTransactionResponse(
+            Transaction transaction){
+        TransactionResponse response = new TransactionResponse();
+        response.setId(transaction.getId());
+        response.setReferenceNumber(transaction.getReferenceNumber());
+        response.setFromAccountId(transaction.getFromAccountId());
+        response.setToAccountId(transaction.getToAccountId());
+        response.setAmount(transaction.getAmount());
+        response.setTimestamp(transaction.getTimestamp());
+        response.setStatus(transaction.getStatus());
+
+        return response;
+    }
+    public List<TransactionResponse> getTransactionsForAccount(Long accountId){
+        accountRepository.findById(accountId)
+                .orElseThrow(() ->
+                        new AccountNotFoundException(accountId));
+        List<Transaction> transactions = transactionRepository
+                .findByFromAccountIdOrToAccountId(accountId,accountId);
+        return transactions.stream()
+                .map(this::convertToTransactionResponse)
+                .collect(Collectors.toList());
     }
 }
